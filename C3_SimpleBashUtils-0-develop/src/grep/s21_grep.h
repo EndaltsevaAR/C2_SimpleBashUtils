@@ -17,6 +17,16 @@ struct grep_flags {
     _Bool h_flag;    // не будет выводить название файла
 };
 
+typedef struct Template {
+    char *template_text;
+    struct Template *next;
+} Template;
+
 typedef struct grep_flags grep_flags_struct;
+
+_Bool grep_function(int argc, char *argv[]);
+bool parser(int argc, char *argv[], grep_flags_struct *flags, int *pInt, Template *head);
+Template* get_last_element(Template *head);
+void add_to_end_list(Template *head, char *value);
 
 #endif  // SRC_GREP_S21_CAT_H_
