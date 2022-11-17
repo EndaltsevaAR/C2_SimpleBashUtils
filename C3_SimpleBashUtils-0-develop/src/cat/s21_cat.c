@@ -116,6 +116,11 @@ _Bool print_file(char *filename, flags_struct flags) {
         } else {
             is_error = 1;
         }
+        if (fclose(fp)) {   // добавлено!!!
+            fprintf(stderr, "Can't close file!\n");
+            is_error = 1;
+        }
+
     }
     return is_error;
 }
