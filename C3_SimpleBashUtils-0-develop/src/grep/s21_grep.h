@@ -1,5 +1,6 @@
 #ifndef SRC_GREP_S21_CAT_H_
 #define SRC_GREP_S21_CAT_H_
+#define BUFFER 8192
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +26,10 @@ typedef struct Template {
 typedef struct grep_flags grep_flags_struct;
 
 _Bool grep_function(int argc, char *argv[]);
-bool parser(int argc, char *argv[], grep_flags_struct *flags, int *pInt, Template *head);
+_Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *pInt, Template *head);
 Template* get_last_element(Template *head);
 void add_to_end_list(Template *head, char *value);
+_Bool add_templates_from_file(Template *head, char *value);
+void shift_files_array(int *files_argv);
 
 #endif  // SRC_GREP_S21_CAT_H_
