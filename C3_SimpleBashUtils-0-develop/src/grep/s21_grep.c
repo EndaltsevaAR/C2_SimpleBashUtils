@@ -81,7 +81,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, 
             fprintf(stderr, "There is no template or file\n");
             is_error = 1;
         } else {
-            add_to_end_list(head, argv[files_argv[0]]);
+        //    add_to_end_list(head, argv[files_argv[0]]);
             shift_files_array(files_argv);
         }
     }
@@ -104,7 +104,11 @@ void add_to_end_list(Template *head, char *value) {
     temp->template_text = malloc(strlen(value) + 1);   //TO DO проверить про нуль терминатор через дебагер
     strcpy(temp->template_text, value);     // https://stackoverflow.com/questions/70297807/copy-a-string-to-a-struct-member
     temp->next = NULL;            // https://learnc.info/adt/linked_list.html
-    last->next = temp;
+    if (head) {
+        last->next = temp;
+    } else {
+        head = &temp;
+    }
 }
 
 _Bool add_templates_from_file(Template *head, char *value) {
