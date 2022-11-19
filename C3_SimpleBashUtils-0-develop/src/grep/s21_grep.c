@@ -12,8 +12,8 @@ _Bool grep_function(int argc, char *argv[]) {
     _Bool is_error = EXIT_SUCCESS;  // grep return 0 if it is all ok
 
     grep_flags_struct flags = {0};               // for flags
-    int *files_argv = (int *) calloc(argc, sizeof(int));  // for files
-    Template *head = NULL;                       // node list for templates
+    int *files_argv = (int *)calloc(argc - 1, sizeof(int));  // for files
+    Template *template_head = NULL;                       // node list for templates
 
     if (argc < 1) {
         fprintf(stderr, "There is no flags or files!\n");
@@ -21,15 +21,17 @@ _Bool grep_function(int argc, char *argv[]) {
     } else if (argc == 1) {
         fprintf(stderr, "This grep doesn't work with stdin input!\n");
     } else {
-        if (parser(argc, argv, &flags, files_argv, head)) {
+        if (parser(argc, argv, &flags, files_argv, &template_head)) {
             is_error = 1;
         }
     }
+    printf("By!");
+    free_template_node(template_head);
     free(files_argv);
     return is_error;
 }
 
-_Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, Template *head) {
+_Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, Template **template_head) {
     _Bool is_error = EXIT_SUCCESS;
     int files_count = 0;
 
@@ -43,10 +45,14 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, 
                     } else {        // рассмотреть случай, когда оба в одном
                         if (argv[i][j] == 'e') {
                             flags->e_flag = 1;
-                            add_to_end_list(head, argv[i + 1]);
+                            if (*template_head == NULL) {
+                                *template_head = create_node(argv[i + 1]);
+                            } else {
+                                add_template_to_end_list(*template_head, argv[i + 1]);
+                            }
                         } else {
                             flags->f_flag = 1;
-                            if (add_templates_from_file(head, argv[i + 1])) {
+                            if (add_templates_from_file(template_head, argv[i + 1])) {     //to do
                                 is_error = 1;
                             }    // TO DO
                         }
@@ -81,37 +87,48 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, 
             fprintf(stderr, "There is no template or file\n");
             is_error = 1;
         } else {
-        //    add_to_end_list(head, argv[files_argv[0]]);
+            if (*template_head == NULL) {
+                *template_head = create_node(argv[files_argv[0]]);
+            } else {
+                add_template_to_end_list(*template_head, argv[files_argv[0]]);
+            }
             shift_files_array(files_argv);
         }
     }
     return is_error;
 }
 
-Template* get_last_element(Template *head) {      //get last element of list
-    if (head == NULL) {      // pre-check if list is null
-        return NULL;
+Template *create_node(char *value) {
+    Template *template_head = (Template *)malloc(sizeof(Template));
+    if (template_head == NULL) {
+        exit(EXIT_FAILURE);            // подумать, что делать с экзит в методе
     }
-    while (head->next) {
+    strcpy(template_head->template_text, value);
+    template_head->next = NULL;
+    return template_head;
+}
+
+void add_template_to_end_list(Template *head, char *value) {
+    _Bool is_added = 0;
+    while (head && !is_added) {
+        if (!head->next) {
+            head->next = create_node(value);
+            is_added = 1;
+        } else {
+            head = head->next;
+        }
+    }
+}
+
+void free_template_node(Template *head) {
+    while (head) {
+        Template *temp = head;
         head = head->next;
-    }
-    return head;
-}
-
-void add_to_end_list(Template *head, char *value) {
-    Template *last = get_last_element(head);
-    Template *temp = (Template*) malloc((sizeof(Template)));
-    temp->template_text = malloc(strlen(value) + 1);   //TO DO проверить про нуль терминатор через дебагер
-    strcpy(temp->template_text, value);     // https://stackoverflow.com/questions/70297807/copy-a-string-to-a-struct-member
-    temp->next = NULL;            // https://learnc.info/adt/linked_list.html
-    if (head) {
-        last->next = temp;
-    } else {
-        head = &temp;
+        free(temp);
     }
 }
 
-_Bool add_templates_from_file(Template *head, char *value) {
+_Bool add_templates_from_file(Template **head, char *value) {
     _Bool is_error = 0;
     FILE *fp = fopen(value, "r");
     if (fp == NULL) {
@@ -119,13 +136,21 @@ _Bool add_templates_from_file(Template *head, char *value) {
         is_error = 1;
     }
     if (!is_error) {
-        char buffer[BUFFER] = {0};
+        char buffer[BUFFER_IN_FILE];
+        while (fgets(buffer, BUFFER_IN_FILE, fp)) {
+            size_t len = strlen(buffer);
+            if (buffer[len - 1] == '\n' && len != 1) {
+                buffer[len - 1] = '\0';
+            }
+            if (*head == NULL) {
+                *head = create_node(value);
+            } else {
+                add_template_to_end_list(*head, value);
+            }
+        }
         if (fclose(fp)) {
             fprintf(stderr, "Can't close file!\n");
             is_error = 1;
-        }
-        while (fgets(buffer, BUFFER, fp)) {
-            add_to_end_list(head, buffer);
         }
     }
     return is_error;
