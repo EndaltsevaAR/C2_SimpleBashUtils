@@ -33,9 +33,9 @@ _Bool grep_function(int argc, char *argv[]) {
 
 _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, Template **template_head) {
     _Bool is_error = EXIT_SUCCESS;
-    int files_count = 0;
-
+    size_t files_count = 0;
     for (int i = 1; i < argc && !is_error; i++) {   //TO DO узнать, сбрасывается ли при нахождении ложного флага
+        _Bool is_jump = 0;
         if (argv[i][0] == '-') {
             for (size_t j = 1; j < strlen(argv[i]) && !is_error; j++) {
                 if (argv[i][j] == 'e' || argv[i][j] == 'f') {
@@ -45,53 +45,37 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv, 
                     } else {        // рассмотреть случай, когда оба в одном
                         if (argv[i][j] == 'e') {
                             flags->e_flag = 1;
-                            if (*template_head == NULL) {
-                                *template_head = create_node(argv[i + 1]);
-                            } else {
-                                add_template_to_end_list(*template_head, argv[i + 1]);
-                            }
+                            if (*template_head == NULL) *template_head = create_node(argv[i + 1]);
+                            else add_template_to_end_list(*template_head, argv[i + 1]);
                         } else {
                             flags->f_flag = 1;
-                            if (add_templates_from_file(template_head, argv[i + 1])) {     //to do
-                                is_error = 1;
-                            }    // TO DO
+                            if (add_templates_from_file(template_head, argv[i + 1])) is_error = 1;
                         }
-                        if (!is_error) i++;
+                        if (!is_error) is_jump = 1;  //прыжок через одно значение argv при -e или -f должен быть после того, как парсер пройдет все текущее значение
                     }
-                } else if (argv[i][j] == 'v') { // TO DO
-                    flags->v_flag = 1;
-                } else if (argv[i][j] == 'c') {
-                    flags->c_flag = 1;
-                } else if (argv[i][j] == 'l') {
-                    flags->l_flag = 1;
-                } else if (argv[i][j] == 'n') {
-                    flags->n_flag = 1;
-                } else if (argv[i][j] == 'i') {
-                    flags->i_flag = 1;
-                } else if (argv[i][j] == 'o') {
-                    flags->o_flag = 1;
-                } else if (argv[i][j] == 'h') {
-                    flags->h_flag = 1;
-                } else {
+                } else if (argv[i][j] == 'v')  flags->v_flag = 1;
+                else if (argv[i][j] == 'c') flags->c_flag = 1;
+                else if (argv[i][j] == 'l') flags->l_flag = 1;
+                else if (argv[i][j] == 'n') flags->n_flag = 1;
+                else if (argv[i][j] == 'i') flags->i_flag = 1;
+                else if (argv[i][j] == 'o') flags->o_flag = 1;
+                else if (argv[i][j] == 'h') flags->h_flag = 1;
+                else {
                     fprintf(stderr, "Illegal Options!\n");
                     is_error = 1;
                 }
             }
-        } else {
-            files_argv[files_count++] = i;
-        }
+            if (is_jump) i++;
+        } else files_argv[files_count++] = i;
     }
 
-    if (!flags->e_flag && !flags->f_flag && !is_error) {    //если нет, ни e флага, ни f флага, то в качестве шаблона используется первый после флагов
+    if ((!flags->e_flag || !flags->f_flag) && !is_error) {    //если нет, ни e флага, ни f флага, то в качестве шаблона используется первый после флагов
         if (!files_argv[0] || !files_argv[1]) {  //первый должен быть шаблон, второй файл
             fprintf(stderr, "There is no template or file\n");
             is_error = 1;
         } else {
-            if (*template_head == NULL) {
-                *template_head = create_node(argv[files_argv[0]]);
-            } else {
-                add_template_to_end_list(*template_head, argv[files_argv[0]]);
-            }
+            if (*template_head == NULL) *template_head = create_node(argv[files_argv[0]]);
+            else add_template_to_end_list(*template_head, argv[files_argv[0]]);
             shift_files_array(files_argv);
         }
     }
@@ -139,13 +123,13 @@ _Bool add_templates_from_file(Template **head, char *value) {
         char buffer[BUFFER_IN_FILE];
         while (fgets(buffer, BUFFER_IN_FILE, fp)) {
             size_t len = strlen(buffer);
-            if (buffer[len - 1] == '\n' && len != 1) {
+            if (buffer[len - 1] == '\n' && len != 1) { // убираем символ переноса на новую строку
                 buffer[len - 1] = '\0';
             }
             if (*head == NULL) {
-                *head = create_node(value);
+                *head = create_node(buffer);
             } else {
-                add_template_to_end_list(*head, value);
+                add_template_to_end_list(*head, buffer);
             }
         }
         if (fclose(fp)) {
