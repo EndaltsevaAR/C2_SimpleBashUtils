@@ -12,13 +12,13 @@ _Bool grep_function(int argc, char *argv[]) {
     _Bool is_error = EXIT_SUCCESS;  // grep return 0 if it is all ok
 
     grep_flags_struct flags = {0};                           // for flags
-    int *files_argv = (int *)calloc(argc - 1, sizeof(int));  // for files
+    int *files_argv = (int *) calloc(argc - 1, sizeof(int));  // for files
     Template *template_head = NULL;  // node list for templates
     size_t files_argv_size = 0;
 
     if (argc < 1) {
         fprintf(stderr, "There is no flags or files!\n");
-        is_error = 1;
+        is_error = EXIT_FAILURE;
     } else if (argc == 1) {
         fprintf(stderr, "This grep doesn't work with stdin input!\n");
     } else {
@@ -43,9 +43,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
                  j++) {
                 if (argv[i][j] == 'e' || argv[i][j] == 'f') {
                     if (i == argc - 1 && j == strlen(argv[i]) - 1) {
-                        fprintf(stderr,
-                                "There is no templates(files with templates) after -e or "
-                                "-f!\n");
+                        fprintf(stderr, "There is no templates after -e or -f!\n");
                         is_error = 1;
                     } else {
                         char *template;
@@ -53,7 +51,6 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
                             template = argv[i + 1];
                         else
                             template = &argv[i][j + 1];
-
                         if (argv[i][j] == 'e') {
                             flags->e_flag = 1;
                             if (*template_head == NULL)
@@ -69,9 +66,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
                             is_e_f_in_flag = 1;
                             continue;
                         }
-                        is_jump =
-                                1;  //прыжок через одно значение argv при -e или -f должен быть
-                        //после того, как парсер пройдет все текущее значение
+                        is_jump = 1;  //прыжок через одно значение argv при -e или -f
                     }
                 } else if (argv[i][j] == 'v')
                     flags->v_flag = 1;
@@ -146,9 +141,7 @@ void free_template_node(Template *head) {
     }
 }
 
-void add_templates_from_file(
-        Template **head,
-        char *value) {  // even is this mistake, it can proceed another files
+void add_templates_from_file(Template **head, char *value) {
     FILE *fp = fopen(value, "r");
     if (fp == NULL) {
         fprintf(stderr, "%s: No such file or directory\n", value);
@@ -219,34 +212,24 @@ void common_processing(FILE *fp, grep_flags_struct flags,
             }
             if (!flags.c_flag && !flags.l_flag) {
                 if (flags.n_flag) {
-                    if (files_argv_size == 1 || (files_argv_size > 1 && flags.h_flag)) {
-                        printf("%d:%s", num_line_in_file, buffer);
+                    if (files_argv_size == 1 || flags.h_flag) {
+                        printf("%d:", num_line_in_file);
                     } else {
-                        printf("%s:%d:%s", filename, num_line_in_file, buffer);
-                    }
-                } else {
-                    if (files_argv_size == 1 || (files_argv_size > 1 && flags.h_flag)) {
-                        printf("%s", buffer);
-                    } else {
-                        printf("%s:%s", filename, buffer);
+                        printf("%s:%d:", filename, num_line_in_file);
                     }
                 }
+                printf("%s", buffer);
             }
         }
     }
     if (flags.c_flag) {
-        if (files_argv_size == 1) {
-            if (flags.l_flag) {
-                printf("%d", l_for_c_count);
-            } else {
-                printf("%d", c_count);
-            }
+        if (files_argv_size > 1 || flags.h_flag) {
+            printf("%s:", filename);
+        }
+        if (flags.v_flag) {
+            printf("%d\n", l_for_c_count);
         } else {
-            if (flags.l_flag) {
-                printf("%s:%d", filename, l_for_c_count);
-            } else {
-                printf("%s:%d", filename, c_count);
-            }
+            printf("%d\n", c_count);
         }
     }
 
@@ -257,9 +240,10 @@ void common_processing(FILE *fp, grep_flags_struct flags,
 
 int compare_word_patterns(char *buffer, grep_flags_struct flags,
                           Template *template_node) {
-    int total_find = 0, regc_res, current_patt;
+    int total_find = 0;
     regex_t regex;
     while (template_node) {
+        int regc_res, current_patt;
         if (flags.i_flag) {
             regc_res = regcomp(&regex, template_node->template_text,
                                REG_ICASE | REG_EXTENDED);
