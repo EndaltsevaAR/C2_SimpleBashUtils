@@ -187,6 +187,7 @@ void files_processing(Template *template_node, grep_flags_struct flags,
             if (fclose(fp)) {
                 fprintf(stderr, "Can't close file!\n");
             }
+            // c и l вместе должен быть обработан после всего процесса
         }
         ptr++;
     }
@@ -222,7 +223,7 @@ void common_processing(FILE *fp, grep_flags_struct flags,
             }
         }
     }
-    if (flags.c_flag) {
+    if (flags.c_flag && !flags.l_flag) {
         if (files_argv_size > 1 || flags.h_flag) {
             printf("%s:", filename);
         }
@@ -233,7 +234,7 @@ void common_processing(FILE *fp, grep_flags_struct flags,
         }
     }
 
-    if (flags.l_flag && is_find_in_file_for_l) {
+    if (flags.l_flag && is_find_in_file_for_l && !flags.c_flag) {
         printf("%s\n", filename);
     }
 }
