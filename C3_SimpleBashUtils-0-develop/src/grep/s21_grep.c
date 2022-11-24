@@ -12,7 +12,10 @@ _Bool grep_function(int argc, char *argv[]) {
     _Bool is_error = EXIT_SUCCESS;  // grep return 0 if it is all ok
 
     grep_flags_struct flags = {0};                           // for flags
-    int *files_argv = (int *) calloc(argc - 1, sizeof(int));  // for files
+    int *files_argv = (int *)calloc(argc - 1, sizeof(int));  // for files
+    if (files_argv == NULL) {
+        is_error = EXIT_FAILURE;
+    }
     Template *template_head = NULL;  // node list for templates
     size_t files_argv_size = 0;
 
@@ -21,13 +24,13 @@ _Bool grep_function(int argc, char *argv[]) {
         is_error = EXIT_FAILURE;
     } else if (argc == 1) {
         fprintf(stderr, "This grep doesn't work with stdin input!\n");
-    } else {
+    } else if (!is_error){
         if (parser(argc, argv, &flags, files_argv, &template_head,
                    &files_argv_size)) {
-            is_error = 1;
+            is_error = EXIT_FAILURE;
         }
+        files_processing(template_head, flags, files_argv, argv, files_argv_size);
     }
-    files_processing(template_head, flags, files_argv, argv, files_argv_size);
     free_template_node(template_head);
     free(files_argv);
     return is_error;
@@ -92,11 +95,8 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
             files_argv[(*files_count)++] = i;
     }
 
-    if ((!flags->e_flag && !flags->f_flag) &&
-        !is_error) {  //если нет, ни e флага, ни f флага, то в качестве шаблона
-        //используется первый после флагов
-        if (!files_argv[0] ||
-            !files_argv[1]) {  //первый должен быть шаблон, второй файл
+    if ((!flags->e_flag && !flags->f_flag) && !is_error) {
+        if (!files_argv[0] || !files_argv[1]) {
             fprintf(stderr, "There is no template or file\n");
             is_error = 1;
         } else {
@@ -112,7 +112,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
 }
 
 Template *create_node(char *value) {
-    Template *template_head = (Template *) malloc(sizeof(Template));
+    Template *template_head = (Template *)malloc(sizeof(Template));
     if (template_head == NULL) {
         exit(EXIT_FAILURE);  // подумать, что делать с экзит в методе
     }
@@ -197,44 +197,67 @@ void common_processing(FILE *fp, grep_flags_struct flags,
                        Template *template_node, char *filename,
                        size_t files_argv_size) {
     char buffer[BUFFER_IN_FILE];
-    _Bool is_find_in_file_for_l = 0;
-    int c_count = 0, num_line_in_file = 0, l_for_c_count = 0;
+    _Bool is_find_in_file_for_l = 0, is_not_find = 0;
+    int c_count = 0, num_line_in_file = 0;
     while (fgets(buffer, BUFFER_IN_FILE, fp)) {
         num_line_in_file++;  // for n
         int total_find_in_patterns =
                 compare_word_patterns(buffer, flags, template_node);
+        size_t len = strlen(buffer);
+        if (buffer[len - 1] != '\n') {
+            strcpy(&buffer[len], "\n");
+        }
+        if (flags.l_flag && !is_not_find) {  // for l
+            is_not_find = 1;
+        }
         if (total_find_in_patterns) {
             if (flags.c_flag && !flags.v_flag) {
                 c_count++;  // for c
             }
-            if (!is_find_in_file_for_l) {  // for l
+            if (flags.l_flag && !is_find_in_file_for_l) {  // for l
                 is_find_in_file_for_l = 1;
-                l_for_c_count = 1;
             }
-            if (!flags.c_flag && !flags.l_flag) {
+            if (!flags.c_flag && !flags.l_flag && !flags.v_flag) {
+                if (files_argv_size > 1 && !flags.h_flag) {
+                    printf("%s:", filename);
+                }
                 if (flags.n_flag) {
-                    if (files_argv_size == 1 || flags.h_flag) {
-                        printf("%d:", num_line_in_file);
-                    } else {
-                        printf("%s:%d:", filename, num_line_in_file);
-                    }
+                    printf("%d:", num_line_in_file);
+                }
+                printf("%s", buffer);
+            }
+        } else {
+            if (flags.c_flag && flags.v_flag) {
+                c_count++;
+            }
+            if (!flags.c_flag && !flags.l_flag && flags.v_flag) {  // TO DO
+                if (files_argv_size > 1 && !flags.h_flag) {
+                    printf("%s:", filename);
+                }
+                if (flags.n_flag) {
+                    printf("%d:", num_line_in_file);
                 }
                 printf("%s", buffer);
             }
         }
     }
-    if (flags.c_flag && !flags.l_flag) {
-        if (files_argv_size > 1 || flags.h_flag) {
+    if (flags.c_flag) {
+        if (files_argv_size > 1 && !flags.h_flag) {
             printf("%s:", filename);
         }
-        if (flags.v_flag) {
-            printf("%d\n", l_for_c_count);
+        if (flags.l_flag) {
+            if (flags.v_flag) {
+                printf("%d\n", is_not_find);
+            } else {
+                printf("%d\n", is_find_in_file_for_l);
+            }
+
         } else {
             printf("%d\n", c_count);
         }
     }
 
-    if (flags.l_flag && is_find_in_file_for_l && !flags.c_flag) {
+    if (flags.l_flag && ((!flags.v_flag && is_find_in_file_for_l) || (is_not_find && flags.v_flag))) {
         printf("%s\n", filename);
     }
 }
