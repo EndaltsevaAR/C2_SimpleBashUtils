@@ -12,7 +12,7 @@ _Bool grep_function(int argc, char *argv[]) {
     _Bool is_error = EXIT_SUCCESS;  // grep return 0 if it is all ok
 
     grep_flags_struct flags = {0};                           // for flags
-    int *files_argv = (int *)calloc(argc - 1, sizeof(int));  // for files
+    int *files_argv = (int *)calloc(argc + 1, sizeof(int));  // for files
     if (files_argv == NULL) {
         is_error = EXIT_FAILURE;
     }
