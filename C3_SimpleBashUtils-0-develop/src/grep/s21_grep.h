@@ -32,7 +32,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
              Template **template_head, size_t *files_count);
 Template *create_node(char *value);
 void add_template_to_end_list(Template *head, char *value);
-void add_templates_from_file(Template **head, char *value);
+_Bool add_templates_from_file(Template **head, char *value);
 void free_template_node(Template *head);
 void shift_files_array(int *files_argv);
 void files_processing(Template *template_node, grep_flags_struct flags,

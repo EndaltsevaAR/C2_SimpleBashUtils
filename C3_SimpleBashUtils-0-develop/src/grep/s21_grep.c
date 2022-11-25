@@ -24,7 +24,7 @@ _Bool grep_function(int argc, char *argv[]) {
         is_error = EXIT_FAILURE;
     } else if (argc == 1) {
         fprintf(stderr, "This grep doesn't work with stdin input!\n");
-    } else if (!is_error){
+    } else if (!is_error) {
         if (parser(argc, argv, &flags, files_argv, &template_head,
                    &files_argv_size)) {
             is_error = EXIT_FAILURE;
@@ -47,7 +47,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
                 if (argv[i][j] == 'e' || argv[i][j] == 'f') {
                     if (i == argc - 1 && j == strlen(argv[i]) - 1) {
                         fprintf(stderr, "There is no templates after -e or -f!\n");
-                        is_error = 1;
+                        is_error = EXIT_FAILURE;
                     } else {
                         char *template;
                         if (j == strlen(argv[i]) - 1)
@@ -61,15 +61,18 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
                             else
                                 add_template_to_end_list(*template_head, template);
                         } else {
+                            if (add_templates_from_file(template_head, template)) {
+                                is_error = EXIT_FAILURE;
+                            }
                             flags->f_flag = 1;
-                            add_templates_from_file(template_head, template);
                         }
-
-                        if (j != strlen(argv[i]) - 1) {
-                            is_e_f_in_flag = 1;
-                            continue;
+                        if (!is_error) {
+                            if (j != strlen(argv[i]) - 1) {
+                                is_e_f_in_flag = 1;
+                                continue;
+                            }
+                            is_jump = 1;  //прыжок через одно значение argv при -e или -f
                         }
-                        is_jump = 1;  //прыжок через одно значение argv при -e или -f
                     }
                 } else if (argv[i][j] == 'v')
                     flags->v_flag = 1;
@@ -141,10 +144,12 @@ void free_template_node(Template *head) {
     }
 }
 
-void add_templates_from_file(Template **head, char *value) {
+_Bool add_templates_from_file(Template **head, char *value) {
+    _Bool is_error = EXIT_SUCCESS;
     FILE *fp = fopen(value, "r");
     if (fp == NULL) {
         fprintf(stderr, "%s: No such file or directory\n", value);
+        is_error = EXIT_FAILURE;
     } else {
         char buffer[BUFFER_IN_FILE];
         while (fgets(buffer, BUFFER_IN_FILE, fp)) {
@@ -163,6 +168,7 @@ void add_templates_from_file(Template **head, char *value) {
             fprintf(stderr, "Can't close file!\n");
         }
     }
+    return is_error;
 }
 
 void shift_files_array(int *files_argv) {
@@ -257,7 +263,8 @@ void common_processing(FILE *fp, grep_flags_struct flags,
         }
     }
 
-    if (flags.l_flag && ((!flags.v_flag && is_find_in_file_for_l) || (is_not_find && flags.v_flag))) {
+    if (flags.l_flag && ((!flags.v_flag && is_find_in_file_for_l) ||
+                         (is_not_find && flags.v_flag))) {
         printf("%s\n", filename);
     }
 }

@@ -6,12 +6,12 @@
 #include <string.h>
 
 struct cat_flags {
-  _Bool b_flag;        // нумерует только непустые строки, начиная с 1
-  _Bool e_flag;        // отображает символы конца строки
-  _Bool n_flag;        // нумерует все строки, начиная с 1
-  _Bool s_flag;        // сжимает больше чем две пустых строки (включительно) в 1
-  _Bool t_flag;        // отображает табы как ^I
-  _Bool v_flag;        // отображает управляющие символы
+    _Bool b_flag;
+    _Bool e_flag;
+    _Bool n_flag;
+    _Bool s_flag;
+    _Bool t_flag;
+    _Bool v_flag;
 };
 
 typedef struct cat_flags flags_struct;
