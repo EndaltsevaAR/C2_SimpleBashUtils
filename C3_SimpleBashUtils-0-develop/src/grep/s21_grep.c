@@ -117,7 +117,7 @@ _Bool parser(int argc, char *argv[], grep_flags_struct *flags, int *files_argv,
 Template *create_node(char *value) {
     Template *template_head = (Template *)malloc(sizeof(Template));
     if (template_head == NULL) {
-        exit(EXIT_FAILURE);  // подумать, что делать с экзит в методе
+        exit(EXIT_FAILURE); 
     }
     strcpy(template_head->template_text, value);
     template_head->next = NULL;
